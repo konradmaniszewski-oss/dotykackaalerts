@@ -101,7 +101,7 @@ def pobierz_access_token():
         raise
 
 
-def dotypos_get(endpoint, access_token, params=None):
+def dotypos_get(endpoint, access_token, params=None, ignoruj_404=False):
     url = f"https://api.dotykacka.cz/v2/clouds/{DOTYPOS_CLOUD_ID}/{endpoint}"
     if params:
         url += "?" + urllib.parse.urlencode(params)
@@ -110,6 +110,8 @@ def dotypos_get(endpoint, access_token, params=None):
         with urllib.request.urlopen(req, timeout=15) as resp:
             return json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
+        if e.code == 404 and ignoruj_404:
+            return {"data": []}  # API zwraca 404, gdy filtr nic nie znalazł
         tresc = e.read().decode("utf-8", errors="ignore")
         print(f"Błąd API na {endpoint} ({e.code}): {tresc}")
         raise
@@ -132,7 +134,7 @@ def pobierz_ostatnie(endpoint, access_token):
                     "page": strona,
                     "filter": f"{pole}|gteq|{od}",
                     "sort": pole
-                })
+                }, ignoruj_404=True)
                 dane = odp.get("data", [])
                 wyniki.extend(dane)
                 if len(dane) < LIMIT_STRONY:
